@@ -11,7 +11,7 @@ use bitcoin::hex::DisplayHex;
 use openssl::ssl::{self, SslConnector, SslMethod, SslVerifyMode};
 
 // Using a 1 byte seek buffer
-const PEEK_BUFFER_SIZE: usize = 1000;
+const PEEK_BUFFER_SIZE: usize = 10;
 
 #[derive(Debug)]
 pub enum Error {
@@ -67,6 +67,40 @@ impl Client {
         match ssl {
             true => Self::new_ssl(url, port),
             false => Self::new_tcp(url, port),
+        }
+    }
+
+    pub fn read_timeout(mut self, timeout: Option<Duration>) -> Self {
+        match &mut self {
+            Client::None => {}
+            Client::Tcp(c) => c.read_timeout = timeout,
+            Client::Ssl(c) => c.read_timeout = timeout,
+        }
+        self
+    }
+
+    pub fn set_read_timeout(&mut self, timeout: Option<Duration>) -> Result<(), Error> {
+        match self {
+            Client::None => Err(Error::NotConfigured),
+            Client::Tcp(c) => c.set_read_timeout(timeout),
+            Client::Ssl(c) => c.set_read_timeout(timeout),
+        }
+    }
+
+    pub fn write_timeout(mut self, timeout: Option<Duration>) -> Self {
+        match &mut self {
+            Client::None => {}
+            Client::Tcp(c) => c.write_timeout = timeout,
+            Client::Ssl(c) => c.write_timeout = timeout,
+        }
+        self
+    }
+
+    pub fn set_write_timeout(&mut self, timeout: Option<Duration>) -> Result<(), Error> {
+        match self {
+            Client::None => Err(Error::NotConfigured),
+            Client::Tcp(c) => c.set_write_timeout(timeout),
+            Client::Ssl(c) => c.set_write_timeout(timeout),
         }
     }
 
@@ -216,6 +250,8 @@ pub struct TcpClient {
     url: String,
     port: u16,
     stream: Option<TcpStream>,
+    read_timeout: Option<Duration>,
+    write_timeout: Option<Duration>,
 }
 
 impl Clone for TcpClient {
@@ -224,6 +260,8 @@ impl Clone for TcpClient {
             url: self.url.clone(),
             port: self.port,
             stream: self.stream.clone(),
+            read_timeout: self.read_timeout,
+            write_timeout: self.write_timeout,
         }
     }
 }
@@ -235,6 +273,8 @@ impl Default for TcpClient {
             url: Default::default(),
             port: 50002,
             stream: None,
+            read_timeout: None,
+            write_timeout: None,
         }
     }
 }
@@ -271,7 +311,8 @@ impl TcpClient {
     pub fn try_connect(&mut self) -> Result<(), Error> {
         let url = format!("{}:{}", self.url, self.port);
         let mut stream = net::TcpStream::connect(url).map_err(Error::TcpStream)?;
-        // stream.set_nonblocking(true);
+        stream.set_read_timeout(self.read_timeout);
+        stream.set_write_timeout(self.write_timeout);
         if self.stream.is_none() {
             self.stream = Some(Arc::new(Mutex::new(stream)));
             Ok(())
@@ -287,6 +328,24 @@ impl TcpClient {
         // add a \n char for EOL
         stream.write_all(&[10]).map_err(Error::TcpStream)?;
         stream.flush().map_err(Error::TcpStream)?;
+        Ok(())
+    }
+
+    pub fn set_read_timeout(&mut self, timeout: Option<Duration>) -> Result<(), Error> {
+        if let Some(stream) = self.stream.as_mut() {
+            let stream = stream.lock().map_err(|_| Error::Mutex)?;
+            stream.set_read_timeout(timeout);
+        }
+        self.read_timeout = timeout;
+        Ok(())
+    }
+
+    pub fn set_write_timeout(&mut self, timeout: Option<Duration>) -> Result<(), Error> {
+        if let Some(stream) = self.stream.as_mut() {
+            let stream = stream.lock().map_err(|_| Error::Mutex)?;
+            stream.set_write_timeout(timeout);
+        }
+        self.write_timeout = timeout;
         Ok(())
     }
 
@@ -343,6 +402,8 @@ pub struct SslClient {
     url: String,
     port: u16,
     stream: Option<SslStream>,
+    read_timeout: Option<Duration>,
+    write_timeout: Option<Duration>,
     verif_certificate: bool,
 }
 
@@ -352,6 +413,8 @@ impl Clone for SslClient {
             url: self.url.clone(),
             port: self.port,
             stream: self.stream.clone(),
+            read_timeout: self.read_timeout,
+            write_timeout: self.write_timeout,
             verif_certificate: self.verif_certificate,
         }
     }
@@ -369,6 +432,8 @@ impl Default for SslClient {
             url: Default::default(),
             port: 50002,
             stream: None,
+            read_timeout: None,
+            write_timeout: None,
             verif_certificate: true,
         }
     }
@@ -405,7 +470,9 @@ impl SslClient {
             ssl.set_verify(SslVerifyMode::NONE);
         }
         let ssl = ssl.build();
-        let stream = net::TcpStream::connect(url).map_err(Error::TcpStream)?;
+        let mut stream = net::TcpStream::connect(url).map_err(Error::TcpStream)?;
+        stream.set_read_timeout(self.read_timeout);
+        stream.set_write_timeout(self.write_timeout);
         let stream = ssl.connect(&self.url, stream).map_err(Error::SslStream)?;
         let stream = Arc::new(Mutex::new(stream));
         let cloned = stream.clone();
@@ -416,6 +483,24 @@ impl SslClient {
         } else {
             Err(Error::AlreadyConnected)
         }
+    }
+
+    pub fn set_read_timeout(&mut self, timeout: Option<Duration>) -> Result<(), Error> {
+        if let Some(stream) = self.stream.as_mut() {
+            let mut stream = stream.lock().map_err(|_| Error::Mutex)?;
+            stream.get_mut().set_read_timeout(timeout);
+        }
+        self.read_timeout = timeout;
+        Ok(())
+    }
+
+    pub fn set_write_timeout(&mut self, timeout: Option<Duration>) -> Result<(), Error> {
+        if let Some(stream) = self.stream.as_mut() {
+            let mut stream = stream.lock().map_err(|_| Error::Mutex)?;
+            stream.get_mut().set_write_timeout(timeout);
+        }
+        self.write_timeout = timeout;
+        Ok(())
     }
 
     pub fn send(stream: &mut ssl::SslStream<net::TcpStream>, request: &str) -> Result<(), Error> {
@@ -589,5 +674,46 @@ mod tests {
 
         client.send("ping");
         cloned.recv().unwrap();
+    }
+
+    fn timeout_template(url: &str, port: u16, ssl: bool) {
+        let mut client = Client::new_ssl_maybe(url, port, ssl)
+            .verif_certificate(false)
+            .read_timeout(Some(Duration::from_millis(100)));
+        client.connect();
+        let start = Instant::now();
+        let resp = client.recv();
+        let duration = (Instant::now() - start).as_millis();
+        assert!(duration > 100);
+        assert!(duration < 120);
+        assert_eq!(
+            format!("{resp:?}"),
+            r#"Err(TcpStream(Os { code: 11, kind: WouldBlock, message: "Resource temporarily unavailable" }))"#
+        );
+
+        let mut client = Client::new_ssl_maybe(url, port, ssl).verif_certificate(false);
+        client.connect();
+        client.set_read_timeout(Some(Duration::from_millis(500)));
+        let start = Instant::now();
+        let resp = client.recv();
+        let duration = (Instant::now() - start).as_millis();
+        assert!(duration > 500);
+        assert!(duration < 600);
+        assert_eq!(
+            format!("{resp:?}"),
+            r#"Err(TcpStream(Os { code: 11, kind: WouldBlock, message: "Resource temporarily unavailable" }))"#
+        );
+    }
+
+    #[test]
+    fn timeout_tcp() {
+        let (url, port) = split_url(tcp_local_address());
+        timeout_template(&url, port, false);
+    }
+
+    #[test]
+    fn timeout_ssl() {
+        let (url, port) = split_url(ssl_local_address());
+        timeout_template(&url, port, true);
     }
 }
