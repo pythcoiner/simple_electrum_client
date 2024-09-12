@@ -1,0 +1,24 @@
+[package]
+name = "electrum_smart_client"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "electrumsc"
+path = "src/bin/daemon.rs"
+
+[[bin]]
+name = "electrumsc-cli"
+path = "src/bin/cli.rs"
+
+[dependencies]
+bitcoin = {version = "0.32.2", features = ["serde"]}
+bitcoin_slices = "0.8.0"
+log = "0.4.22"
+openssl = "0.10.66"
+serde = {version = "1.0.210", features = ["derive"]}
+serde_json = "1.0.128"
+
+[dev-dependencies]
+hex_lit = "0.1.1"
+
