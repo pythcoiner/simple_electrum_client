@@ -478,3 +478,116 @@ impl SslClient {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{default, env, thread};
+
+    use serde::de;
+
+    use super::*;
+
+    fn env_var(arg: &str, default: &str) -> String {
+        if let Ok(value) = env::var(arg) {
+            value
+        } else {
+            default.into()
+        }
+    }
+
+    fn tcp_local_address() -> String {
+        env_var("TCP_LOCAL_ADDRESS", "192.168.1.21:50003")
+    }
+    fn ssl_local_address() -> String {
+        env_var("SSL_LOCAL_ADDRESS", "192.168.1.21:60002")
+    }
+    fn ssl_acinq() -> String {
+        env_var("SSL_ACINQ_ADDRESS", "electrum.acinq.co:50002")
+    }
+
+    fn split_url(url: String) -> (String, u16) {
+        let (url, port) = url.rsplit_once(':').unwrap();
+        let port = port.parse::<u16>().unwrap();
+        (url.to_string(), port)
+    }
+
+    #[test]
+    fn tcp_client() {
+        let (url, port) = split_url(tcp_local_address());
+        let mut client = Client::new().tcp(&url, port);
+        client.connect();
+
+        // blocking recv
+        client.send("ping");
+        let response = client.recv().unwrap();
+
+        // non blocking recv
+        client.send("ping");
+        thread::sleep(Duration::from_secs(1));
+        assert!(client.try_recv().unwrap().is_some());
+        assert!(client.try_recv().unwrap().is_none());
+
+        client.close();
+    }
+
+    #[test]
+    fn ssl_client_wo_certificate() {
+        let (url, port) = split_url(ssl_local_address());
+        let mut client = Client::new().ssl(&url, port);
+        client.try_connect().is_err();
+        let mut client = client.verif_certificate(false);
+        client.connect();
+
+        // blocking recv
+        client.send("ping");
+        let response = client.recv().unwrap();
+
+        // non blocking recv
+        client.send("ping");
+        thread::sleep(Duration::from_secs(1));
+        assert!(client.try_recv().unwrap().is_some());
+        assert!(client.try_recv().unwrap().is_none());
+
+        client.close();
+    }
+
+    #[test]
+    fn ssl_client_with_certificate() {
+        let (url, port) = split_url(ssl_acinq());
+        let mut client = Client::new_ssl(&url, port);
+        client.connect();
+        client.send("ping");
+        let response = client.recv().unwrap();
+        client.close();
+    }
+
+    #[test]
+    fn ssl_maybe() {
+        let (url, port) = split_url(tcp_local_address());
+        let mut client = Client::new_ssl_maybe(&url, port, false);
+        client.connect();
+        client.send("ping");
+        let response = client.recv().unwrap();
+        client.close();
+
+        let (url, port) = split_url(ssl_local_address());
+        let mut client = Client::new_ssl_maybe(&url, port, true);
+        let mut client = client.verif_certificate(false);
+        client.connect();
+        client.send("ping");
+        let response = client.recv().unwrap();
+        client.close();
+    }
+
+    #[test]
+    fn tcp_clone() {
+        let (url, port) = split_url(tcp_local_address());
+        let mut client = Client::new_ssl_maybe(&url, port, false);
+        client.connect();
+
+        let mut cloned = client.clone();
+
+        client.send("ping");
+        cloned.recv().unwrap();
+    }
+}
