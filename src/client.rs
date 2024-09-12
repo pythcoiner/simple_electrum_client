@@ -1,13 +1,10 @@
 use std::{
-    clone,
-    io::{self, BufRead, BufReader, Read, Write},
-    iter,
-    net::{self, TcpStream as StdTcpStream},
-    sync::{mpsc, Arc, Mutex, MutexGuard, PoisonError},
-    time::{Duration, Instant},
+    io::{BufRead, BufReader, Write},
+    net,
+    sync::{Arc, Mutex},
+    time::Duration,
 };
 
-use bitcoin::hex::DisplayHex;
 use openssl::ssl::{self, SslConnector, SslMethod, SslVerifyMode};
 
 // Using a 1 byte seek buffer
@@ -310,9 +307,13 @@ impl TcpClient {
 
     pub fn try_connect(&mut self) -> Result<(), Error> {
         let url = format!("{}:{}", self.url, self.port);
-        let mut stream = net::TcpStream::connect(url).map_err(Error::TcpStream)?;
-        stream.set_read_timeout(self.read_timeout);
-        stream.set_write_timeout(self.write_timeout);
+        let stream = net::TcpStream::connect(url).map_err(Error::TcpStream)?;
+        stream
+            .set_read_timeout(self.read_timeout)
+            .map_err(Error::TcpStream)?;
+        stream
+            .set_write_timeout(self.write_timeout)
+            .map_err(Error::TcpStream)?;
         if self.stream.is_none() {
             self.stream = Some(Arc::new(Mutex::new(stream)));
             Ok(())
@@ -334,7 +335,7 @@ impl TcpClient {
     pub fn set_read_timeout(&mut self, timeout: Option<Duration>) -> Result<(), Error> {
         if let Some(stream) = self.stream.as_mut() {
             let stream = stream.lock().map_err(|_| Error::Mutex)?;
-            stream.set_read_timeout(timeout);
+            stream.set_read_timeout(timeout).map_err(Error::TcpStream)?;
         }
         self.read_timeout = timeout;
         Ok(())
@@ -343,7 +344,9 @@ impl TcpClient {
     pub fn set_write_timeout(&mut self, timeout: Option<Duration>) -> Result<(), Error> {
         if let Some(stream) = self.stream.as_mut() {
             let stream = stream.lock().map_err(|_| Error::Mutex)?;
-            stream.set_write_timeout(timeout);
+            stream
+                .set_write_timeout(timeout)
+                .map_err(Error::TcpStream)?;
         }
         self.write_timeout = timeout;
         Ok(())
@@ -470,12 +473,15 @@ impl SslClient {
             ssl.set_verify(SslVerifyMode::NONE);
         }
         let ssl = ssl.build();
-        let mut stream = net::TcpStream::connect(url).map_err(Error::TcpStream)?;
-        stream.set_read_timeout(self.read_timeout);
-        stream.set_write_timeout(self.write_timeout);
+        let stream = net::TcpStream::connect(url).map_err(Error::TcpStream)?;
+        stream
+            .set_read_timeout(self.read_timeout)
+            .map_err(Error::TcpStream)?;
+        stream
+            .set_write_timeout(self.write_timeout)
+            .map_err(Error::TcpStream)?;
         let stream = ssl.connect(&self.url, stream).map_err(Error::SslStream)?;
         let stream = Arc::new(Mutex::new(stream));
-        let cloned = stream.clone();
 
         if self.stream.is_none() {
             self.stream = Some(stream);
@@ -488,7 +494,10 @@ impl SslClient {
     pub fn set_read_timeout(&mut self, timeout: Option<Duration>) -> Result<(), Error> {
         if let Some(stream) = self.stream.as_mut() {
             let mut stream = stream.lock().map_err(|_| Error::Mutex)?;
-            stream.get_mut().set_read_timeout(timeout);
+            stream
+                .get_mut()
+                .set_read_timeout(timeout)
+                .map_err(Error::TcpStream)?;
         }
         self.read_timeout = timeout;
         Ok(())
@@ -497,7 +506,10 @@ impl SslClient {
     pub fn set_write_timeout(&mut self, timeout: Option<Duration>) -> Result<(), Error> {
         if let Some(stream) = self.stream.as_mut() {
             let mut stream = stream.lock().map_err(|_| Error::Mutex)?;
-            stream.get_mut().set_write_timeout(timeout);
+            stream
+                .get_mut()
+                .set_write_timeout(timeout)
+                .map_err(Error::TcpStream)?;
         }
         self.write_timeout = timeout;
         Ok(())
@@ -566,11 +578,8 @@ impl SslClient {
 
 #[cfg(test)]
 mod tests {
-    use std::{default, env, thread};
-
-    use serde::de;
-
     use super::*;
+    use std::{env, thread, time::Instant};
 
     fn env_var(arg: &str, default: &str) -> String {
         if let Ok(value) = env::var(arg) {
@@ -604,7 +613,7 @@ mod tests {
 
         // blocking recv
         client.send("ping");
-        let response = client.recv().unwrap();
+        let _ = client.recv().unwrap();
 
         // non blocking recv
         client.send("ping");
@@ -612,20 +621,20 @@ mod tests {
         assert!(client.try_recv().unwrap().is_some());
         assert!(client.try_recv().unwrap().is_none());
 
-        client.close();
+        client.close().unwrap();
     }
 
     #[test]
     fn ssl_client_wo_certificate() {
         let (url, port) = split_url(ssl_local_address());
         let mut client = Client::new().ssl(&url, port);
-        client.try_connect().is_err();
+        assert!(client.try_connect().is_err());
         let mut client = client.verif_certificate(false);
         client.connect();
 
         // blocking recv
         client.send("ping");
-        let response = client.recv().unwrap();
+        let _ = client.recv().unwrap();
 
         // non blocking recv
         client.send("ping");
@@ -633,7 +642,7 @@ mod tests {
         assert!(client.try_recv().unwrap().is_some());
         assert!(client.try_recv().unwrap().is_none());
 
-        client.close();
+        client.close().unwrap();
     }
 
     #[test]
@@ -642,8 +651,8 @@ mod tests {
         let mut client = Client::new_ssl(&url, port);
         client.connect();
         client.send("ping");
-        let response = client.recv().unwrap();
-        client.close();
+        let _ = client.recv().unwrap();
+        client.close().unwrap();
     }
 
     #[test]
@@ -652,16 +661,16 @@ mod tests {
         let mut client = Client::new_ssl_maybe(&url, port, false);
         client.connect();
         client.send("ping");
-        let response = client.recv().unwrap();
-        client.close();
+        let _ = client.recv().unwrap();
+        client.close().unwrap();
 
         let (url, port) = split_url(ssl_local_address());
-        let mut client = Client::new_ssl_maybe(&url, port, true);
+        let client = Client::new_ssl_maybe(&url, port, true);
         let mut client = client.verif_certificate(false);
         client.connect();
         client.send("ping");
-        let response = client.recv().unwrap();
-        client.close();
+        let _ = client.recv().unwrap();
+        client.close().unwrap();
     }
 
     #[test]
@@ -693,7 +702,9 @@ mod tests {
 
         let mut client = Client::new_ssl_maybe(url, port, ssl).verif_certificate(false);
         client.connect();
-        client.set_read_timeout(Some(Duration::from_millis(500)));
+        client
+            .set_read_timeout(Some(Duration::from_millis(500)))
+            .unwrap();
         let start = Instant::now();
         let resp = client.recv();
         let duration = (Instant::now() - start).as_millis();
