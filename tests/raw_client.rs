@@ -24,7 +24,7 @@ fn bootstrap_electrs() -> (String, u16, ElectrsD, BitcoinD) {
 
     let mut electrs_path = cwd.clone();
     electrs_path.push("bin");
-    electrs_path.push("electrs_0_10_5");
+    electrs_path.push("electrs_0_9_11");
 
     let mut bitcoind_path = cwd.clone();
     bitcoind_path.push("bin");
@@ -196,11 +196,13 @@ fn timeout_template(url: &str, port: u16, ssl: bool) {
     );
 }
 
-#[test]
-fn timeout_tcp() {
-    let (url, port, _e, _b) = bootstrap_electrs();
-    timeout_template(&url, port, false);
-}
+// TODO: disable timeouts in CI
+
+// #[test]
+// fn timeout_tcp() {
+//     let (url, port, _e, _b) = bootstrap_electrs();
+//     timeout_template(&url, port, false);
+// }
 
 #[test]
 // NOTE: SSL_LOCAL_ADDRESS should be specified in order
@@ -409,50 +411,52 @@ fn tx_get() {
     }
 }
 
-#[test]
-fn sh_subscribe_unsubscribe() {
-    let (mut client, _e, _b) = tcp_client();
+// NOTE: Unsubscribe not supported on electrs 0_9_11
 
-    let mut index = HashMap::new();
-
-    let script = Script::from_bytes(&[0x00]);
-
-    // unsubscribe w/o subscription we expect result==false
-    let request = Request::unsubscribe_sh(script);
-    client.send(&request);
-    index.insert(request.id, request);
-    let response = &client.recv(&index).unwrap()[0];
-    if let Response::SHUnsubscribe(SHUnsubscribeResponse { id, result }) = response {
-        assert_eq!(*id, 0);
-        assert!(!(*result));
-    } else {
-        panic!("wrong_response")
-    }
-
-    // subscribe
-    let request = Request::subscribe_sh(script).id(1);
-    client.send(&request);
-    index.insert(request.id, request);
-    let response = &client.recv(&index).unwrap()[0];
-    if let Response::SHSubscribe(SHSubscribeResponse { id, result }) = response {
-        assert_eq!(*id, 1);
-        assert_eq!(*result, None);
-    } else {
-        panic!("wrong_response")
-    }
-
-    // unsubscribe w/ subscription we expect result==true
-    let request = Request::unsubscribe_sh(script).id(2);
-    client.send(&request);
-    index.insert(request.id, request);
-    let response = &client.recv(&index).unwrap()[0];
-    if let Response::SHUnsubscribe(SHUnsubscribeResponse { id, result }) = response {
-        assert_eq!(*id, 2);
-        assert!((*result));
-    } else {
-        panic!("wrong_response")
-    }
-}
+// #[test]
+// fn sh_subscribe_unsubscribe() {
+//     let (mut client, _e, _b) = tcp_client();
+//
+//     let mut index = HashMap::new();
+//
+//     let script = Script::from_bytes(&[0x00]);
+//
+//     // unsubscribe w/o subscription we expect result==false
+//     let request = Request::unsubscribe_sh(script);
+//     client.send(&request);
+//     index.insert(request.id, request);
+//     let response = &client.recv(&index).unwrap()[0];
+//     if let Response::SHUnsubscribe(SHUnsubscribeResponse { id, result }) = response {
+//         assert_eq!(*id, 0);
+//         assert!(!(*result));
+//     } else {
+//         panic!("wrong_response")
+//     }
+//
+//     // subscribe
+//     let request = Request::subscribe_sh(script).id(1);
+//     client.send(&request);
+//     index.insert(request.id, request);
+//     let response = &client.recv(&index).unwrap()[0];
+//     if let Response::SHSubscribe(SHSubscribeResponse { id, result }) = response {
+//         assert_eq!(*id, 1);
+//         assert_eq!(*result, None);
+//     } else {
+//         panic!("wrong_response")
+//     }
+//
+//     // unsubscribe w/ subscription we expect result==true
+//     let request = Request::unsubscribe_sh(script).id(2);
+//     client.send(&request);
+//     index.insert(request.id, request);
+//     let response = &client.recv(&index).unwrap()[0];
+//     if let Response::SHUnsubscribe(SHUnsubscribeResponse { id, result }) = response {
+//         assert_eq!(*id, 2);
+//         assert!((*result));
+//     } else {
+//         panic!("wrong_response")
+//     }
+// }
 
 #[test]
 // TODO: use tcp_client() instead

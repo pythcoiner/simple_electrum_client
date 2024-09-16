@@ -1,13 +1,12 @@
 // from https://github.com/romanz/electrs/blob/master/src/types.rs
-use std::convert::TryFrom;
-
 use bitcoin::{
     blockdata::block::Header as BlockHeader,
     consensus::encode::{deserialize, Decodable, Encodable},
     hashes::{hash_newtype, sha256, Hash},
-    io, OutPoint, Script, Txid,
+    OutPoint, Script, Txid,
 };
 use serde::{Deserialize, Serialize};
+use std::{convert::TryFrom, io};
 
 macro_rules! impl_consensus_encoding {
     ($thing:ident, $($field:ident),+) => (
@@ -25,7 +24,7 @@ macro_rules! impl_consensus_encoding {
 
         impl Decodable for $thing {
             #[inline]
-            fn consensus_decode<D: io::BufRead + ?Sized>(
+            fn consensus_decode<D: io::Read + ?Sized>(
                 d: &mut D,
             ) -> Result<$thing, bitcoin::consensus::encode::Error> {
                 Ok($thing {
