@@ -8,8 +8,8 @@ use super::types::ScriptHash;
 #[derive(Serialize, Clone)]
 pub struct Request {
     jsonrpc: String,
-    pub(crate) id: usize,
-    pub(crate) method: Method,
+    pub id: usize,
+    pub method: Method,
 
     #[serde(default)]
     params: Params,

@@ -8,7 +8,7 @@ pub mod types;
 pub enum Error {
     InvalidParam,
     MethodNotFound,
-    ResponseParsing,
+    ResponseParsing(String),
     RawResponseParsing(String),
     ResponseId(usize),
     BatchParsing,

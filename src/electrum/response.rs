@@ -11,7 +11,8 @@ use serde_json::Value;
 
 #[derive(Debug, PartialEq)]
 pub enum Response {
-    HeaderNotification(HeaderNotification),
+    HeaderNotif(HeaderNotification),
+    BatchHeaderNotif(BatchHeaderNotif),
     SHNotification(SHNotification),
     Ping(PingResponse),
     Banner(BannerResponse),
@@ -78,7 +79,8 @@ impl ResponseBatch {
 
 macro_rules! parse {
     ($method:ident, $response_type:ty, $raw:expr) => {{
-        let r: $response_type = serde_json::from_str($raw).map_err(|_| Error::ResponseParsing)?;
+        let r: $response_type =
+            serde_json::from_str($raw).map_err(|_| Error::ResponseParsing($raw.into()))?;
         Ok(Self::$method(r))
     }};
 }
@@ -95,10 +97,16 @@ impl Response {
             return Ok(Response::Error(e));
         }
 
+        // then we handle the Batch Header Notification case
+        let header_notif: Result<BatchHeaderNotif, _> = serde_json::from_str(raw);
+        if let Ok(n) = header_notif {
+            return Ok(Response::BatchHeaderNotif(n));
+        }
+
         // then we handle the ScriptHash Notification case
-        let error: Result<SHNotification, _> = serde_json::from_str(raw);
-        if let Ok(e) = error {
-            return Ok(Response::SHNotification(e));
+        let sh_notif: Result<SHNotification, _> = serde_json::from_str(raw);
+        if let Ok(n) = sh_notif {
+            return Ok(Response::SHNotification(n));
         }
 
         // the we handle the case we need to match request/response id
@@ -108,7 +116,7 @@ impl Response {
         match request.method {
             Method::Ping => parse!(Ping, PingResponse, raw),
             Method::Banner => parse!(Banner, BannerResponse, raw),
-            Method::HeadersSubscribe => parse!(HeaderNotification, HeaderNotification, raw),
+            Method::HeadersSubscribe => parse!(HeaderNotif, HeaderNotification, raw),
             Method::BlockHeader => parse!(Header, HeaderResponse, raw),
             Method::BlockHeaders => parse!(Headers, HeadersResponse, raw),
             Method::Version => parse!(Version, VersionResponse, raw),
@@ -155,7 +163,8 @@ pub struct SHNotification {
 impl FromStr for SHNotification {
     type Err = Error;
     fn from_str(value: &str) -> Result<Self, Error> {
-        let notif: Self = serde_json::from_str(value).map_err(|_| Error::ResponseParsing)?;
+        let notif: Self =
+            serde_json::from_str(value).map_err(|_| Error::ResponseParsing(value.into()))?;
         if let Method::ScriptHashSubscribe = notif.method {
             Ok(notif)
         } else {
@@ -184,10 +193,24 @@ pub struct Header {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
-pub struct HeaderNotification {
+pub struct SingleHeaderNotif {
     pub id: usize,
     #[serde(rename = "result")]
     pub header: Header,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+pub struct BatchHeaderNotif {
+    pub method: Method,
+    #[serde(rename = "params")]
+    pub headers: Vec<Header>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum HeaderNotification {
+    Single(SingleHeaderNotif),
+    Batch(BatchHeaderNotif),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -223,7 +246,7 @@ pub struct BroadcastResponse {
 pub struct DonationResponse {
     pub id: usize,
     #[serde(rename = "result")]
-    pub address: String,
+    pub address: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -233,32 +256,43 @@ pub struct EstimateFeeResponse {
     pub fee: OptionalFee,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-struct Hosts {
-    #[serde(flatten)]
-    hosts: std::collections::HashMap<String, Host>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-struct Host {
-    tcp_port: String,
-    ssl_port: String,
-}
-
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum Port {
+    String(String),
+    U16(u16),
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Host {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tcp_port: Option<Port>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ssl_port: Option<Port>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum Hosts {
+    Single(Host),
+    Map(HashMap<String, Host>),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct FeaturesResult {
     #[serde(rename = "genesis_hash")]
     genesis: String,
-    hosts: HashMap<String, Host>,
+    hosts: Hosts,
     protocol_max: String,
     protocol_min: String,
     pruning: Option<usize>,
     server_version: String,
     hash_function: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     services: Option<Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct FeaturesResponse {
     pub id: usize,
     #[serde(rename = "result")]
@@ -308,8 +342,8 @@ pub struct SHUnsubscribeResponse {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct BalanceResult {
-    pub confirmed: usize,
-    pub unconfirmed: usize,
+    pub confirmed: i64,
+    pub unconfirmed: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -456,10 +490,8 @@ mod tests {
         let response = r#"{"id":3,"jsonrpc":"2.0","result":{"height":119367,"hex":"00000020835fdbdeeadd23463fad98b4e21aaa8519afde89eecd0eb224001317421cbb5f5e636df02303e51280b586bc596ee9326bc849bbb5993e121a8cab7e6b60e8ab593fe166ffff7f2000000000"}}"#;
 
         let parsed: HeaderNotification = serde_json::from_str(response).unwrap();
-        assert_eq!(
-            parsed,
-            HeaderNotification { id: 3, header: Header { height: 119367, raw_header: "00000020835fdbdeeadd23463fad98b4e21aaa8519afde89eecd0eb224001317421cbb5f5e636df02303e51280b586bc596ee9326bc849bbb5993e121a8cab7e6b60e8ab593fe166ffff7f2000000000".into() } }
-        )
+        let expected = HeaderNotification::Single(SingleHeaderNotif { id: 3, header: Header { height: 119367, raw_header: "00000020835fdbdeeadd23463fad98b4e21aaa8519afde89eecd0eb224001317421cbb5f5e636df02303e51280b586bc596ee9326bc849bbb5993e121a8cab7e6b60e8ab593fe166ffff7f2000000000".into() }});
+        assert_eq!(parsed, expected)
     }
 
     #[test]
@@ -659,7 +691,6 @@ mod tests {
 
         let response: FeaturesResponse = serde_json::from_str(response).unwrap();
         assert_eq!(response.id, 0);
-        assert_eq!(response.features.hosts.len(), 0);
         assert!(response.features.pruning.is_none());
         assert_eq!(response.features.server_version, "ElectrumX 1.15.0");
         assert_eq!(response.features.protocol_min, "1.4");
@@ -671,6 +702,42 @@ mod tests {
         assert_eq!(response.features.hash_function, "sha256");
         assert!(response.features.services.is_some());
         assert!(response.features.services.unwrap().is_empty());
+
+        let response = r#"{
+              "id": 0,
+              "jsonrpc": "2.0",
+              "result": {
+                "genesis_hash": "abc",
+                "hash_function": "sha256",
+                "hosts": {
+                  "tcp_port": 46771
+                },
+                "protocol_max": "1.4",
+                "protocol_min": "1.4",
+                "pruning": null,
+                "server_version": "toto"
+              }
+            }"#;
+
+        let response: FeaturesResponse = serde_json::from_str(response).unwrap();
+
+        let expected = FeaturesResponse {
+            id: 0,
+            features: FeaturesResult {
+                genesis: "abc".into(),
+                hosts: Hosts::Single(Host {
+                    tcp_port: Some(Port::U16(46771)),
+                    ssl_port: None,
+                }),
+                protocol_max: "1.4".into(),
+                protocol_min: "1.4".into(),
+                pruning: None,
+                server_version: "toto".into(),
+                hash_function: "sha256".into(),
+                services: None,
+            },
+        };
+        assert_eq!(response, expected);
     }
 
     #[test]
@@ -679,7 +746,7 @@ mod tests {
 
         let response: DonationResponse = serde_json::from_str(response).unwrap();
         assert_eq!(response.id, 0);
-        assert_eq!(response.address, "make_me_rich");
+        assert_eq!(response.address, Some("make_me_rich".into()));
     }
 
     #[test]
