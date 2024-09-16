@@ -22,7 +22,7 @@ fn bootstrap_electrs() -> (String, u16, ElectrsD, BitcoinD) {
     let mut cwd: PathBuf = env::current_dir().expect("Failed to get current directory");
     cwd.push("tests");
 
-    println!("123");
+    println!("12345");
     let mut electrs_path = cwd.clone();
     electrs_path.push("bin");
     electrs_path.push("electrs_0_10_5");
