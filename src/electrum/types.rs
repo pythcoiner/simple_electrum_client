@@ -1,9 +1,8 @@
 // from https://github.com/romanz/electrs/blob/master/src/types.rs
-
 use std::convert::TryFrom;
 
-use bitcoin::blockdata::block::Header as BlockHeader;
 use bitcoin::{
+    blockdata::block::Header as BlockHeader,
     consensus::encode::{deserialize, Decodable, Encodable},
     hashes::{hash_newtype, sha256, Hash},
     io, OutPoint, Script, Txid,

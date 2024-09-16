@@ -1,10 +1,6 @@
-use std::collections::HashMap;
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
-use super::params::VersionKind;
-use super::types::ScriptHash;
-use super::Error;
-use super::{method::Method, request::Request};
+use super::{method::Method, params::VersionKind, request::Request, types::ScriptHash, Error};
 use bitcoin::Txid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

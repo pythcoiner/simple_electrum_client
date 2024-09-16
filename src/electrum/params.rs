@@ -1,7 +1,6 @@
 use super::types::ScriptHash;
 use bitcoin::Txid;
-use serde::ser::SerializeSeq;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{ser::SerializeSeq, Deserialize, Serialize, Serializer};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(untagged)]
@@ -72,43 +71,6 @@ where
     let sequence = serializer.serialize_seq(Some(0))?;
     sequence.end()
 }
-
-// impl Params {
-//     fn parse(method: &str, params: Value) -> std::result::Result<Params, Error> {
-//         Ok(match method {
-//             "blockchain.block.header" => Params::BlockHeader(convert(params)?),
-//             "blockchain.block.headers" => Params::BlockHeaders(convert(params)?),
-//             "blockchain.estimatefee" => Params::EstimateFee(convert(params)?),
-//             "blockchain.scripthash.get_balance" => Params::ScriptHashGetBalance(convert(params)?),
-//             "blockchain.scripthash.get_history" => Params::ScriptHashGetHistory(convert(params)?),
-//             "blockchain.scripthash.listunspent" => Params::ScriptHashListUnspent(convert(params)?),
-//             "blockchain.scripthash.subscribe" => Params::ScriptHashSubscribe(convert(params)?),
-//             "blockchain.scripthash.unsubscribe" => Params::ScriptHashUnsubscribe(convert(params)?),
-//             "blockchain.transaction.broadcast" => Params::TransactionBroadcast(convert(params)?),
-//             "blockchain.transaction.get" => Params::TransactionGet(convert(params)?),
-//             "blockchain.transaction.get_merkle" => Params::TransactionGetMerkle(convert(params)?),
-//             "blockchain.transaction.id_from_pos" => {
-//                 Params::TransactionFromPosition(convert(params)?)
-//             }
-//             "server.version" => Params::Version(convert(params)?),
-//             _ => {
-//                 log::warn!("unknown method {}", method);
-//                 return Err(Error::MethodNotFound);
-//             }
-//         })
-//     }
-// }
-//
-// fn convert<T>(params: Value) -> std::result::Result<T, Error>
-// where
-//     T: serde::de::DeserializeOwned,
-// {
-//     let params_str = params.to_string();
-//     serde_json::from_value(params).map_err(|err| {
-//         log::warn!("invalid params {}: {}", params_str, err);
-//         Error::InvalidParam
-//     })
-// }
 
 #[cfg(test)]
 mod tests {

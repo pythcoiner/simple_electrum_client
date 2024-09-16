@@ -155,7 +155,6 @@ impl Client {
             match result {
                 e @ Err(Error::NotConfigured) => return e,
                 e @ Err(_) => {
-                    println!("retry connect ");
                     thread::sleep(delay);
                     count += 1;
                     if count > retry {
@@ -268,20 +267,6 @@ impl Client {
             }
         }
     }
-
-    // // TODO: add a timeout
-    // pub fn single_request(&mut self, request: &str) -> Result<String, Error> {
-    //     if !self.is_connected() {
-    //         self.try_connect()?;
-    //         self.try_send(request)?;
-    //         // FIXME: do not release the lock here
-    //         let response = self.recv()?;
-    //         self.close()?;
-    //         Ok(response)
-    //     } else {
-    //         Err(Error::AlreadyConnected)
-    //     }
-    // }
 
     pub fn close(&mut self) -> Result<(), Error> {
         match self {

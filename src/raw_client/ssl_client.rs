@@ -4,9 +4,7 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-
 use openssl::ssl::{self, SslConnector, SslMethod, SslVerifyMode};
-
 use super::{Error, PEEK_BUFFER_SIZE};
 
 type SslStream = Arc<Mutex<ssl::SslStream<net::TcpStream>>>;

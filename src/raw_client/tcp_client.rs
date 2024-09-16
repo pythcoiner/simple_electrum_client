@@ -4,7 +4,6 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-
 use super::{Error, PEEK_BUFFER_SIZE};
 
 type TcpStream = Arc<Mutex<net::TcpStream>>;

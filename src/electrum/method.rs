@@ -1,5 +1,4 @@
 use std::fmt::Debug;
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]

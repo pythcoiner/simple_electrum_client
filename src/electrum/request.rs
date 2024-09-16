@@ -1,9 +1,10 @@
+use super::{
+    method::Method,
+    params::{Params, TxGetArgs, VersionKind},
+    types::ScriptHash,
+};
 use bitcoin::{Script, Txid};
 use serde::Serialize;
-
-use super::method::Method;
-use super::params::{Params, TxGetArgs, VersionKind};
-use super::types::ScriptHash;
 
 #[derive(Serialize, Clone)]
 pub struct Request {
