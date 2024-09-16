@@ -1,5 +1,5 @@
-use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub enum Method {
@@ -53,29 +53,75 @@ pub enum Method {
 impl Debug for Method {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Banner => write!(f, "Banner"),
-            Self::BlockHeader => write!(f, "BlockHeader"),
-            Self::BlockHeaders => write!(f, "BlockHeaders"),
-            Self::TransactionBroadcast => write!(f, "TransactionBroadcast"),
-            Self::Donation => write!(f, "Donation"),
-            Self::EstimateFee => write!(f, "EstimateFee"),
-            Self::Features => write!(f, "Features"),
-            Self::HeadersSubscribe => write!(f, "HeadersSubscribe"),
-            Self::FeeHistogram => write!(f, "MempoolFeeHistogram"),
-            Self::ListPeers => write!(f, "ListPeers"),
-            Self::Ping => write!(f, "Ping"),
-            Self::RelayFee => write!(f, "RelayFee"),
-            Self::ScriptHashGetBalance => write!(f, "ScriptHashGetBalance"),
-            Self::ScriptHashGetHistory => write!(f, "ScriptHashGetHistory"),
-            Self::ScriptHashListUnspent => write!(f, "ScriptHashListUnspent"),
-            Self::ScriptHashSubscribe => write!(f, "ScriptHashSubscribe"),
-            Self::ScriptHashUnsubscribe => write!(f, "ScriptHashUnsubscribe"),
-            Self::TransactionGet => write!(f, "TransactionGet"),
-            Self::TransactionGetMerkle => write!(f, "TransactionGetMerkle"),
-            Self::TransactionFromPosition => write!(f, "TransactionFromPosition"),
-            Self::Version => write!(f, "Version"),
+            Self::Banner => write!(f, "server.banner"),
+            Self::BlockHeader => write!(f, "blockchain.block.header"),
+            Self::BlockHeaders => write!(f, "blockchain.block.headers"),
+            Self::TransactionBroadcast => write!(f, "blockchain.transaction.broadcast"),
+            Self::Donation => write!(f, "server.donation_address"),
+            Self::EstimateFee => write!(f, "blockchain.estimatefee"),
+            Self::Features => write!(f, "server.features"),
+            Self::HeadersSubscribe => write!(f, "blockchain.headers.subscribe"),
+            Self::FeeHistogram => write!(f, "mempool.get_fee_histogram"),
+            Self::ListPeers => write!(f, "server.peers.subscribe"),
+            Self::Ping => write!(f, "server.ping"),
+            Self::RelayFee => write!(f, "blockchain.relayfee"),
+            Self::ScriptHashGetBalance => write!(f, "blockchain.scripthash.get_balance"),
+            Self::ScriptHashGetHistory => write!(f, "blockchain.scripthash.get_history"),
+            Self::ScriptHashListUnspent => write!(f, "blockchain.scripthash.listunspent"),
+            Self::ScriptHashSubscribe => write!(f, "blockchain.scripthash.subscribe"),
+            Self::ScriptHashUnsubscribe => write!(f, "blockchain.scripthash.unsubscribe"),
+            Self::TransactionGet => write!(f, "blockchain.transaction.get"),
+            Self::TransactionGetMerkle => write!(f, "blockchain.transaction.get_merkle"),
+            Self::TransactionFromPosition => write!(f, "blockchain.transaction.id_from_pos"),
+            Self::Version => write!(f, "server.version"),
             // NOTE: not supported by electrs
-            // Self::ScriptHashGetMempool => todo!(),
+            // Self::ScriptHashGetMempool => write!(f, "blockchain.scripthash.get_mempool"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Method::*;
+
+    macro_rules! debug_json {
+        ($value:expr) => {{
+            use serde_json::to_string;
+
+            let json_str = to_string(&$value).unwrap();
+            let json_str = json_str.trim_matches('"');
+
+            let debug_str = format!("{:?}", $value);
+
+            assert_eq!(
+                json_str, debug_str,
+                "Debug and JSON representations do not match"
+            );
+        }};
+    }
+
+    #[test]
+    fn debug() {
+        debug_json!(Version);
+        debug_json!(TransactionFromPosition);
+        debug_json!(TransactionGetMerkle);
+        debug_json!(TransactionGet);
+        debug_json!(ScriptHashUnsubscribe);
+        debug_json!(ScriptHashSubscribe);
+        debug_json!(ScriptHashListUnspent);
+        debug_json!(ScriptHashGetHistory);
+        debug_json!(ScriptHashGetBalance);
+        debug_json!(RelayFee);
+        debug_json!(Ping);
+        debug_json!(ListPeers);
+        debug_json!(FeeHistogram);
+        debug_json!(HeadersSubscribe);
+        debug_json!(Features);
+        debug_json!(EstimateFee);
+        debug_json!(Donation);
+        debug_json!(TransactionBroadcast);
+        debug_json!(BlockHeaders);
+        debug_json!(BlockHeader);
+        debug_json!(Banner);
     }
 }
