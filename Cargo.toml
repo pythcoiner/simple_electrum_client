@@ -1,5 +1,5 @@
 [package]
-name = "electrum_smart_client"
+name = "simple_electrum_client"
 version = "0.1.0"
 edition = "2021"
 
