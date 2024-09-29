@@ -1,6 +1,6 @@
 use super::types::ScriptHash;
-use bitcoin::Txid;
-use serde::{ser::SerializeSeq, Deserialize, Serialize, Serializer};
+use miniscript::bitcoin::Txid;
+use miniscript::serde::{ser::SerializeSeq, Deserialize, Serialize, Serializer};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(untagged)]
@@ -75,7 +75,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bitcoin::{hex::FromHex, OutPoint, Script};
+    use miniscript::bitcoin::{hex::FromHex, OutPoint, Script};
     use std::str::FromStr;
 
     macro_rules! json {

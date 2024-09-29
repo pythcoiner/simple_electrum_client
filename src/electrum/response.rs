@@ -1,7 +1,7 @@
 use std::{collections::HashMap, str::FromStr};
 
 use super::{method::Method, params::VersionKind, request::Request, types::ScriptHash, Error};
-use bitcoin::Txid;
+use miniscript::bitcoin::Txid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -477,7 +477,7 @@ pub struct VersionResponse {
 
 #[cfg(test)]
 mod tests {
-    use bitcoin::{OutPoint, Script};
+    use miniscript::bitcoin::{OutPoint, Script};
 
     use super::*;
 

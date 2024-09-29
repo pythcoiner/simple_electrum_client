@@ -12,7 +12,7 @@ name = "electrumsc-cli"
 path = "src/bin/cli.rs"
 
 [dependencies]
-bitcoin = {version = "0.31.2", features = ["serde"]}
+miniscript = { version = "12.2.0", features = ["serde", "base64"] }
 bitcoin_slices = "0.8.0"
 log = "0.4.22"
 openssl = "0.10.66"

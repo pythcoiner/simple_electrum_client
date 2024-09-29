@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use miniscript::serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]

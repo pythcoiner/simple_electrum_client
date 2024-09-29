@@ -3,7 +3,7 @@ use super::{
     params::{Params, TxGetArgs, VersionKind},
     types::ScriptHash,
 };
-use bitcoin::{Script, Txid};
+use miniscript::bitcoin::{Script, Txid};
 use serde::Serialize;
 
 #[derive(Serialize, Clone)]
@@ -193,7 +193,7 @@ impl From<Request> for String {
 mod tests {
     use std::str::FromStr;
 
-    use bitcoin::OutPoint;
+    use miniscript::bitcoin::OutPoint;
 
     use super::*;
     #[test]

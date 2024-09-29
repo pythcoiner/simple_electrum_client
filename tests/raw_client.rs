@@ -7,16 +7,16 @@ use std::{
     time::{Duration, Instant},
 };
 
-use bitcoin::{hex::FromHex, OutPoint, Script};
 use electrsd::{
     bitcoind::{bitcoincore_rpc::RpcApi, BitcoinD, P2P},
     ElectrsD,
 };
-use electrum_smart_client::{
+use miniscript::bitcoin::{hex::FromHex, OutPoint, Script};
+use serde_json::Value;
+use simple_electrum_client::{
     electrum::{request::Request, response::*},
     raw_client::Client,
 };
-use serde_json::Value;
 
 fn bootstrap_electrs() -> (String, u16, ElectrsD, BitcoinD) {
     let mut cwd: PathBuf = env::current_dir().expect("Failed to get current directory");

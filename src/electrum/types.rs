@@ -1,13 +1,14 @@
 // from https://github.com/romanz/electrs/blob/master/src/types.rs
-use bitcoin::{
+use miniscript::bitcoin::{
     blockdata::block::Header as BlockHeader,
     consensus::encode::{deserialize, Decodable, Encodable},
     hashes::{hash_newtype, sha256, Hash},
     OutPoint, Script, Txid,
 };
-use serde::{Deserialize, Serialize};
-use std::{convert::TryFrom, io};
+use miniscript::serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 
+use miniscript::bitcoin::io;
 macro_rules! impl_consensus_encoding {
     ($thing:ident, $($field:ident),+) => (
         impl Encodable for $thing {
@@ -24,9 +25,9 @@ macro_rules! impl_consensus_encoding {
 
         impl Decodable for $thing {
             #[inline]
-            fn consensus_decode<D: io::Read + ?Sized>(
+            fn consensus_decode<D: io::BufRead + ?Sized>(
                 d: &mut D,
-            ) -> Result<$thing, bitcoin::consensus::encode::Error> {
+            ) -> Result<$thing, miniscript::bitcoin::consensus::encode::Error> {
                 Ok($thing {
                     $($field: Decodable::consensus_decode(d)?),+
                 })
@@ -196,8 +197,8 @@ mod tests {
     use crate::electrum::types::{
         spending_prefix, HashPrefixRow, ScriptHash, ScriptHashRow, TxidRow,
     };
-    use bitcoin::{Address, OutPoint, Txid};
     use hex_lit::hex;
+    use miniscript::bitcoin::{Address, OutPoint, Txid};
     use serde_json::{from_str, json};
 
     use std::str::FromStr;
