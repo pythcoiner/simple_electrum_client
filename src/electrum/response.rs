@@ -262,9 +262,9 @@ pub enum Port {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Host {
     #[serde(skip_serializing_if = "Option::is_none")]
-    tcp_port: Option<Port>,
+    pub tcp_port: Option<Port>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    ssl_port: Option<Port>,
+    pub ssl_port: Option<Port>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -277,15 +277,15 @@ pub enum Hosts {
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct FeaturesResult {
     #[serde(rename = "genesis_hash")]
-    genesis: String,
-    hosts: Hosts,
-    protocol_max: String,
-    protocol_min: String,
-    pruning: Option<usize>,
-    server_version: String,
-    hash_function: String,
+    pub genesis: String,
+    pub hosts: Hosts,
+    pub protocol_max: String,
+    pub protocol_min: String,
+    pub pruning: Option<usize>,
+    pub server_version: String,
+    pub hash_function: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    services: Option<Vec<String>>,
+    pub services: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -351,10 +351,10 @@ pub struct SHGetBalanceResponse {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct HistoryResult {
-    height: usize,
+    pub height: usize,
     #[serde(rename = "tx_hash")]
-    txid: Txid,
-    fee: Option<usize>,
+    pub txid: Txid,
+    pub fee: Option<usize>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
