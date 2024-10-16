@@ -6,7 +6,7 @@ use super::{
 use miniscript::bitcoin::{Script, Txid};
 use serde::Serialize;
 
-#[derive(Serialize, Clone)]
+#[derive(Debug, Serialize, Clone)]
 pub struct Request {
     jsonrpc: String,
     pub id: usize,

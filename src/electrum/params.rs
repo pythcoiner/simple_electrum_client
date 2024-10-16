@@ -25,7 +25,7 @@ impl From<&TxGetArgs> for (Txid, bool) {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(untagged)]
 pub enum Params {
     #[serde(serialize_with = "default")]
