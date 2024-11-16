@@ -24,7 +24,7 @@ pub enum Response {
     SHListUnspent(SHListUnspentResponse),
     Error(ErrorResponse),
     Features(FeaturesResponse),
-    Broadcast(BroadcastResponse),
+    TxBroadcast(TxBroadcastResponse),
     Donation(DonationResponse),
     EstimateFee(EstimateFeeResponse),
     FeeHistogram(FeeHistogramResponse),
@@ -131,7 +131,7 @@ impl Response {
             Method::RelayFee => parse!(RelayFee, RelayFeeResponse, raw),
             Method::TransactionGetMerkle => parse!(TxGetMerkle, TxGetMerkleResponse, raw),
             Method::TransactionFromPosition => parse!(TxFromposition, TxFromPositionResponse, raw),
-            Method::TransactionBroadcast => todo!(),
+            Method::TransactionBroadcast => parse!(TxBroadcast, TxBroadcastResponse, raw),
             Method::ListPeers => todo!(),
         }
     }
@@ -232,7 +232,7 @@ pub struct HeadersResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
-pub struct BroadcastResponse {
+pub struct TxBroadcastResponse {
     pub id: usize,
     #[serde(rename = "result")]
     pub txid: Txid,
