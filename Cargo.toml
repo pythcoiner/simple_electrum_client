@@ -15,7 +15,7 @@ path = "src/bin/cli.rs"
 miniscript = { version = "12.2.0", features = ["serde", "base64"] }
 bitcoin_slices = "0.8.0"
 log = "0.4.22"
-openssl = "0.10.66"
+openssl = {version = "0.10.66", features = ["vendored"]}
 serde = {version = "1.0.200", features = ["derive"]}
 serde_json = "1.0.116"
 
